@@ -93,6 +93,26 @@ Observations (only from the numbers above):
 
 Milestone numbers are **not** directly comparable: this repo uses a new split with a leakage buffer.
 
+## 4b. Cross-city test: Vientiane, human labels
+
+Phnom Penh-trained models (no Vientiane training data) on **285 human-labelled Vientiane patches**; details in
+[`results/vientiane/README.md`](results/vientiane/README.md).
+
+| Model | Macro-F1 vs human [95% CI] | F1 vs weak rule |
+|---|---|---|
+| weak-label rule itself | 0.862 | – |
+| `R18_ssl4eo_delta` | **0.785** [0.733, 0.830] | 0.867 |
+| `M2_cnn_k5_delta` | 0.769 [0.720, 0.816] | 0.862 |
+| `M2_cnn_k1` | 0.752 [0.697, 0.799] | 0.825 |
+| `Presto_pretrained` | 0.707 [0.654, 0.758] | 0.801 |
+| `M1_gru` | 0.701 [0.647, 0.749] | 0.762 |
+| `M0_hgb` | 0.574 [0.517, 0.628] | 0.624 |
+
+- Cross-city transfer separates models that tie in-domain: spatial CNNs 0.75–0.79, temporal-only GRU 0.70, hand-crafted M0 0.47–0.57.
+- Pretraining helps transfer (ResNet-18 SSL4EO 0.785 vs scratch 0.722; Presto 0.707 vs 0.616; single seed).
+- Models side with the rule on 30–33 of the 39 rule-vs-human disagreements: they learned the rule. For the best model, the gap splits into domain shift (PP weak 0.97 → Vientiane weak 0.867) and rule-vs-human label gap (0.867 → 0.785).
+- QC sample is stratified on the rule label and excludes 15 `unsure` patches; one annotator.
+
 ## 5. Reproduce
 
 ### Option A — any machine with a GPU
