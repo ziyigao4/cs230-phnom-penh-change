@@ -9,9 +9,7 @@ imagery for a 320 m × 320 m patch, classify what happened to it:
 | `seasonal` | recurring flooding / water in most years, no permanent conversion |
 | `urban` | new built-up area that persists |
 
-**Status (2026-11-09):** full experiment ladder is running on AWS SageMaker. The tables below and in
-[`results/RESULTS.md`](results/RESULTS.md) are regenerated as runs finish. Gold (human-verified) labels are being
-prepared by the team; all current scores are on **weak labels**.
+**Status (2026-11-09):** the full experiment ladder (all 12 models x 3 seeds) has finished on AWS SageMaker. All scores are still on **weak labels**, pending the gold (human-verified) set the team is preparing. A self-checked inference bundle (weights, normalisation stats, M0 baselines) is in [`artifacts/`](artifacts/), see section 5b.
 
 ---
 
@@ -64,28 +62,34 @@ Training: AdamW (wd 0.05), one-cycle LR, label smoothing 0.1, √-inverse-freque
 random flips / 90° rotations for image models. Hyper-parameters per model are in the `EXPS` list in
 [`src/run_all.py`](src/run_all.py).
 
-## 4. Results so far (weak-label test set, seed 0)
+## 4. Results (weak-label test set, mean ± sd over 3 seeds)
 
-| Model | Test macro-F1 [95 % CI] | Interior F1 | Boundary F1 |
-|---|---|---|---|
-| M0 RF | 0.957 [0.937, 0.973] | 0.972 | 0.802 |
-| M0 Gradient Boosting | 0.963 [0.948, 0.977] | 0.974 | 0.809 |
-| M1 BiGRU | 0.961 [0.945, 0.976] | 0.964 | 0.852 |
-| **M2 CNN + Transformer** | **0.980 [0.966, 0.991]** | 0.988 | **0.961** |
-| M2 + difference inputs | 0.982 [0.971, 0.992] | 0.988 | 0.920 |
+Test macro-F1 is mean ± sd over seeds 0, 1, 2; the CI column is the mean of the per-seed 95 % bootstrap CIs; interior / boundary F1 are seed means. *Seed ens.* = test macro-F1 of the 3-seed averaged probabilities. Per-class F1 and confusion matrices: [`results/RESULTS.md`](results/RESULTS.md).
 
-Full, always-current table (incl. per-class F1, seeds, confusion matrices): **[`results/RESULTS.md`](results/RESULTS.md)**.
+| Model | Test macro-F1 | 95 % CI (mean) | Interior F1 | Boundary F1 | Seed ens. |
+|---|---|---|---|---|---|
+| `M0_rf` | 0.958 ± 0.002 | [0.940, 0.974] | 0.970 | 0.814 | 0.958 |
+| `M0_hgb` | 0.963 ± 0.000 | [0.948, 0.977] | 0.974 | 0.809 | 0.963 |
+| `M1_gru` | 0.961 ± 0.001 | [0.943, 0.976] | 0.967 | 0.846 | 0.967 |
+| `M1_gru_delta` | 0.953 ± 0.001 | [0.933, 0.970] | 0.957 | 0.840 | 0.959 |
+| `M2_cnn_k1` | 0.977 ± 0.003 | [0.962, 0.990] | 0.980 | 0.945 | 0.985 |
+| `M2_cnn_k1_delta` | 0.980 ± 0.003 | [0.968, 0.991] | 0.987 | 0.908 | 0.980 |
+| `M2_cnn_k3_delta` | 0.971 ± 0.005 | [0.956, 0.984] | 0.989 | 0.830 | 0.976 |
+| `M2_cnn_k5_delta` | 0.974 ± 0.004 | [0.960, 0.985] | 0.990 | 0.832 | 0.978 |
+| `R18_scratch_delta` | 0.972 ± 0.006 | [0.956, 0.986] | 0.984 | 0.881 | 0.986 |
+| `R18_ssl4eo_delta` | 0.969 ± 0.006 | [0.953, 0.983] | 0.981 | 0.845 | 0.978 |
+| `Presto_scratch` | 0.957 ± 0.004 | [0.938, 0.974] | 0.965 | 0.866 | 0.963 |
+| `Presto_pretrained` | 0.970 ± 0.004 | [0.954, 0.984] | 0.981 | 0.900 | 0.973 |
 
-Early observations (to be confirmed with seeds 1–2 and the gold set):
+Observations (only from the numbers above):
 
-1. With the full data and GPU training, the spatial model (M2) overtakes the hand-crafted baseline, reversing the
-   milestone result (M2 0.858 vs M0 0.940, which used half the data, half resolution and 15 CPU epochs).
-2. The gain is concentrated on **boundary** patches (≈ 0.80 → 0.96), exactly where the error analysis located most
-   mistakes. Interior patches (n = 429) are already ≈ 0.97 for every model. Only 62 test patches count as
-   boundary, so that column is noisy.
-3. The overall gap is ~2 points and bootstrap CIs overlap slightly; seed variance is still pending.
-4. These are weak labels generated from Dynamic World statistics; a high score shows agreement with the rule, not
-   necessarily correct change detection. The gold set will answer that.
+1. **M0 vs M1 vs M2.** The frame-CNN M2 family (0.971-0.980) is ~1.5-2.5 points above the hand-crafted M0 baselines (0.958 / 0.963) and the patch-mean BiGRU M1 (0.961 / 0.953). M0 and M1 are indistinguishable. The M2 vs M0 gap is several seed-sd, but the bootstrap CIs still overlap (e.g. M2_cnn_k1_delta [0.968, 0.991] vs M0_hgb [0.948, 0.977]), so it is a consistent trend on this test set rather than a proven gap.
+2. **Context windows did not help.** 3x3 (0.971 ± 0.005) and 5x5 (0.974 ± 0.004) are not better than the single-patch M2_cnn_k1_delta (0.980 ± 0.003). Interior F1 is marginally higher (0.989 / 0.990 vs 0.987) but boundary F1 drops (0.830 / 0.832 vs 0.908), which is consistent with neighbouring "drop" patches being zero-filled; the overall differences are within ~1-2 seed sd.
+3. **ResNet18: SSL4EO pretraining gave no gain** (0.969 ± 0.006 vs 0.972 ± 0.006 from scratch; within seed sd).
+4. **Presto: pretraining helps** (0.970 ± 0.004 vs 0.957 ± 0.004, ~3 sd), the only clear pretraining effect here, but CIs overlap ([0.954, 0.984] vs [0.938, 0.974]) and pretrained Presto does not beat the scratch M2 CNNs.
+5. **Difference-from-first-year inputs: no consistent effect.** M2: 0.980 vs 0.977 (within sd); M1: 0.953 vs 0.961 (lower).
+6. **Interior vs boundary.** All models score 0.957-0.990 on interior patches but 0.80-0.95 on boundary patches (n ~ 62, so this column is noisy; one patch moves it by ~1-2 points). Best boundary F1: M2_cnn_k1 (0.945). Seed ensembling adds 0-1.4 points for the deep models (best: R18_scratch_delta 0.986, M2_cnn_k1 0.985).
+7. These are weak labels generated from Dynamic World statistics; a high score shows agreement with the rule, not necessarily correct change detection. The gold set will answer that.
 
 Milestone numbers are **not** directly comparable: this repo uses a new split with a leakage buffer.
 
@@ -122,11 +126,40 @@ aws s3 sync s3://<bucket>/runs/full/ckpt/ results/   # results are checkpointed 
 Edit the bucket / role ARN at the top of `aws/launch.py`. A role with `AmazonSageMakerFullAccess` and S3 access is
 required.
 
+## 5b. Evaluate on a new, human-labelled dataset
+
+`artifacts/` holds everything needed for inference: `norm_stats.json` (the exact normalisation used in
+training), seed-0 weights of every deep model (`*_s0.pt`), the refitted M0 baselines (`M0_*.joblib`) and
+`export_selfcheck.json` (re-predicting the original test split with these files reproduces the training-time
+probabilities).
+
+New data must use the same export: `<prefix>_{col}_{row}.npy`, `int16 (72, 8, 32, 32)`, same channels and
+scaling, 72 monthly composites starting in **January**. The 3 × 3 / 5 × 5 models also need the neighbouring
+patches in the same folder (missing neighbours are zero-filled).
+
+```bash
+# gold.csv: patch_id,label[,lat,lon]   label ∈ stable|seasonal|urban (other values, e.g. uncertain, are not scored)
+python src/predict.py predict --data new_patches/ --labels gold.csv --artifacts artifacts --out eval_gold
+# -> eval_gold/METRICS.md (macro-F1 + bootstrap CI, per-class F1, confusion), preds_<model>.csv
+
+# or on SageMaker (upload new_patches/ incl. gold.csv to s3://<bucket>/gold/)
+python3 aws/launch_any.py gold 1 predict.py ml.g5.2xlarge \
+    new=s3://<bucket>/gold/ artifacts=s3://<bucket>/runs/export/ckpt/ -- mode=predict labels=gold.csv out=/opt/ml/checkpoints
+```
+
+If the gold patches are a subset of the original 3731, no inference is needed: join `gold.csv` with
+`results/preds/<run>.csv` on `patch_id` (this also gives all 3 seeds). Only patches in the **test** split
+(`results/split.csv`) give an unbiased score.
+
+`artifacts/` is regenerated with `python src/predict.py export --raw data/raw --weights results/checkpoints
+--out artifacts`.
+
 ## 6. Repository layout
 
 ```
 src/
   run_all.py          experiment runner (data → split → all models → metrics → summary)
+  predict.py          export inference artifacts / evaluate saved models on new labelled patches
   data.py             patch loading, cloud filling, neighbour windows, spatial split, M0 features
   models.py           GRU, CNN + temporal Transformer, ResNet-18 (SSL4EO), Presto classifier
   presto_vendor.py    single-file Presto (MIT, nasaharvest/presto)
@@ -142,6 +175,7 @@ results/
   preds/<run>.csv     class probabilities for every patch
   log.txt             training log (per-epoch loss / val F1)
   checkpoints/        seed-0 model weights (.pt)
+artifacts/            inference bundle: norm_stats.json, *_s0.pt, M0_*.joblib, export_selfcheck.json
 ```
 
 ## 7. Known limitations / next steps

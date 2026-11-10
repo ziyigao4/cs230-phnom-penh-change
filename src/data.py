@@ -57,10 +57,13 @@ class PatchStore:
         for i, f in enumerate(files):
             a = np.load(f)
             self.X[i] = a[:, :8]
-        self.grid = -np.ones((NCOL + 4, NROW + 4), dtype=np.int64)  # +2 pad each side
-        for i, p in enumerate(self.pids):
-            c, r = pid_to_cr(p)
-            self.grid[c - COL0 + 2, r - ROW0 + 2] = i
+        # grid bounds come from the files themselves, so any area / id range works (ids: <prefix>_{col}_{row})
+        cr = np.array([pid_to_cr(p) for p in self.pids]).reshape(-1, 2)
+        self.c0, self.r0 = (cr.min(0) if len(cr) else (COL0, ROW0))
+        span = (cr.max(0) - cr.min(0) + 1) if len(cr) else np.array([NCOL, NROW])
+        self.grid = -np.ones((span[0] + 4, span[1] + 4), dtype=np.int64)  # +2 pad each side
+        for i, (c, r) in enumerate(cr):
+            self.grid[c - self.c0 + 2, r - self.r0 + 2] = i
         self.idx = {p: i for i, p in enumerate(self.pids)}
         self._fill_cloudy()
 
@@ -79,7 +82,7 @@ class PatchStore:
         if k == 1:
             return self.X[i]
         c, r = pid_to_cr(self.pids[i])
-        gc, gr = c - COL0 + 2, r - ROW0 + 2
+        gc, gr = c - self.c0 + 2, r - self.r0 + 2
         h = k // 2
         out = np.zeros((T, 8, 32 * k, 32 * k), dtype=np.int16)
         for dc in range(-h, h + 1):

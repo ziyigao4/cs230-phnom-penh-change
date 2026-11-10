@@ -4,12 +4,18 @@ All scores are on the **weak-label** test split (spatial blocks, see README). In
 
 | Model | What it is | Seeds | Test macro-F1 | 95% CI (seed 0 bootstrap avg) | Interior F1 | Boundary F1 | F1 stable / seasonal / urban |
 |---|---|---|---|---|---|---|---|
-| `M0_rf` | Hand-crafted time-series stats (150) + Random Forest | 1 | **0.957** | [0.937, 0.973] | 0.972 | 0.802 | 0.952 / 0.960 / 0.958 |
-| `M0_hgb` | Hand-crafted time-series stats (150) + Gradient Boosting | 1 | **0.963** | [0.948, 0.977] | 0.974 | 0.809 | 0.957 / 0.962 / 0.970 |
-| `M1_gru` | BiGRU on patch-mean series (72x10) | 1 | **0.961** | [0.945, 0.976] | 0.964 | 0.852 | 0.951 / 0.955 / 0.976 |
-| `M2_cnn_k1` | Frame CNN (32x32) + temporal Transformer | 1 | **0.980** | [0.966, 0.991] | 0.988 | 0.961 | 0.980 / 0.988 / 0.971 |
-| `M2_cnn_k1_delta` | M2 + difference-from-first-year inputs | 1 | **0.982** | [0.971, 0.992] | 0.988 | 0.920 | 0.980 / 0.984 / 0.983 |
-| `M2_cnn_k3_delta` | M2 with 3x3-patch context window (96x96 px) | 1 | **0.966** | [0.947, 0.980] | 0.988 | 0.838 | 0.968 / 0.976 / 0.953 |
+| `M0_rf` | Hand-crafted time-series stats (150) + Random Forest | 3 | **0.958 ± 0.002** | [0.940, 0.974] | 0.970 | 0.814 | 0.953 / 0.960 / 0.962 |
+| `M0_hgb` | Hand-crafted time-series stats (150) + Gradient Boosting | 3 | **0.963 ± 0.000** | [0.948, 0.977] | 0.974 | 0.809 | 0.957 / 0.962 / 0.970 |
+| `M1_gru` | BiGRU on patch-mean series (72x10) | 3 | **0.961 ± 0.001** | [0.943, 0.976] | 0.967 | 0.846 | 0.955 / 0.962 / 0.965 |
+| `M1_gru_delta` | BiGRU + difference-from-first-year inputs | 3 | **0.953 ± 0.001** | [0.933, 0.970] | 0.957 | 0.840 | 0.951 / 0.965 / 0.944 |
+| `M2_cnn_k1` | Frame CNN (32x32) + temporal Transformer | 3 | **0.977 ± 0.003** | [0.962, 0.990] | 0.980 | 0.945 | 0.978 / 0.987 / 0.965 |
+| `M2_cnn_k1_delta` | M2 + difference-from-first-year inputs | 3 | **0.980 ± 0.003** | [0.968, 0.991] | 0.987 | 0.908 | 0.979 / 0.985 / 0.977 |
+| `M2_cnn_k3_delta` | M2 with 3x3-patch context window (96x96 px) | 3 | **0.971 ± 0.005** | [0.956, 0.984] | 0.989 | 0.830 | 0.970 / 0.975 / 0.969 |
+| `M2_cnn_k5_delta` | M2 with 5x5-patch context window (160x160 px) | 3 | **0.974 ± 0.004** | [0.960, 0.985] | 0.990 | 0.832 | 0.969 / 0.972 / 0.980 |
+| `R18_scratch_delta` | ResNet18 frame encoder, random init | 3 | **0.972 ± 0.006** | [0.956, 0.986] | 0.984 | 0.881 | 0.975 / 0.981 / 0.961 |
+| `R18_ssl4eo_delta` | ResNet18 frame encoder, SSL4EO-S12 MoCo pretrained | 3 | **0.969 ± 0.006** | [0.953, 0.983] | 0.981 | 0.845 | 0.967 / 0.973 / 0.967 |
+| `Presto_scratch` | Presto architecture, random init | 3 | **0.957 ± 0.004** | [0.938, 0.974] | 0.965 | 0.866 | 0.961 / 0.979 / 0.931 |
+| `Presto_pretrained` | Presto (pretrained S1/S2 pixel-time-series FM), fine-tuned | 3 | **0.970 ± 0.004** | [0.954, 0.984] | 0.981 | 0.900 | 0.970 / 0.980 / 0.960 |
 
 ## Confusion matrices (seed 0, rows = true, cols = pred; order stable, seasonal, urban)
 
@@ -19,3 +25,9 @@ All scores are on the **weak-label** test split (spatial blocks, see README). In
 - `M2_cnn_k1_s0`: [[274, 2, 3], [4, 245, 0], [2, 0, 84]]
 - `M2_cnn_k1_delta_s0`: [[276, 1, 2], [7, 242, 0], [1, 0, 85]]
 - `M2_cnn_k3_delta_s0`: [[271, 5, 3], [6, 242, 1], [4, 0, 82]]
+- `R18_scratch_delta_s0`: [[277, 2, 0], [6, 243, 0], [4, 1, 81]]
+- `R18_ssl4eo_delta_s0`: [[272, 4, 3], [5, 244, 0], [2, 1, 83]]
+- `Presto_scratch_s0`: [[274, 4, 1], [9, 240, 0], [11, 0, 75]]
+- `Presto_pretrained_s0`: [[270, 7, 2], [4, 245, 0], [5, 0, 81]]
+- `M2_cnn_k5_delta_s0`: [[272, 6, 1], [7, 242, 0], [4, 0, 82]]
+- `M1_gru_delta_s0`: [[265, 10, 4], [8, 241, 0], [5, 0, 81]]
